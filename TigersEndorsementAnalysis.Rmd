@@ -1,0 +1,173 @@
+---
+title: "Analysis of Detroit Tigers Players for Endorsement"
+author: Jesse Godbey
+Date: "October 2023"
+output:
+  html_document:
+    df_print: paged
+---
+```{r}
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+```
+
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook created as a capstone project for the Coursera Data Analytics Google Professional Certificate. It is a hypothetical project wherein an athletics wear company has tasked me with selecting a baseball player form the Detroit Tigers to offer an endorsement. 
+
+This will be done by evaluating players statistical performance via their OPS or On-Base Percentage. A higher OPS indicates better batting, and a better candidate for endorsement. Consistency will also be taken into account. For this, we will examine players' OPS over 3 seasons. 
+
+Statistics from [baseball-reference.com](https://www.baseball-reference.com/) will be used to select the player with best OPS over three seasons for endorsement.
+
+```{r}
+DET2021 <- read.csv("DET_Batting_2021sportsref_download.xls.csv")
+DET2022 <- read.csv("DET_Batting_2022sportsref_download.xls.csv")
+DET2023 <- read.csv("DET2023_Batting_sportsref_download.xls.csv")
+```
+```{r}
+head(DET2021)
+```
+```{r}
+head(DET2022)
+DET2022$Name <- iconv(DET2022$Name, from = "UTF-8", to = "ASCII//TRANSLIT")
+
+```
+```{r}
+head(DET2023)
+DET2023$Name <- iconv(DET2023$Name, from = "UTF-8", to = "ASCII//TRANSLIT")
+```
+In baseball statistics, known as sabermetrics, On-base plus slugging is calculated by adding a batter's on base percentage to their slugging percentage. The former is an average of how often a player gets on base per at bat. The latter is the quotient of the total number of bases a player achieves per total at bats. [@Wikipedia(OPS)](https://en.wikipedia.org/wiki/On-base_plus_slugging) 
+
+Let's remove any null values from the OPS columns in our data frames: 
+```{r}
+DET2021 <- DET2021 %>% drop_na(OPS)
+DET2022 <- DET2022 %>% drop_na(OPS)
+DET2023 <- DET2023 %>% drop_na(OPS)
+```
+Next remove any non-player names and pitcher Mathew Boyd's(since he is not a hitter his OPS is invalid for these purposes) name from the names columns:
+```{r}
+DET2021 <- DET2021 %>% filter(!Name %in% c("Team Totals", "Rank in 15 AL teams", "Non-Pitcher Totals", "Pitcher Totals"))
+DET2022 <- DET2022 %>% filter(!Name %in% c("Team Totals", "Rank in 15 AL teams", "Non-Pitcher Totals", "Pitcher Totals"))
+DET2023 <- DET2023 %>% filter(!Name %in% c("Team Totals", "Rank in 15 AL teams", "Non-Pitcher Totals", "Pitcher Totals"))
+DET2021 <- DET2021 %>%
+  filter(Name != "Matthew Boyd")
+DET2022 <- DET2022 %>%
+  filter(Name != "Matthew Boyd")
+DET2023 <- DET2023 %>%
+  filter(Name != "Matthew Boyd")
+```
+
+
+Lets look at the Tigers with the ten highest OPS in 2023:
+
+
+
+```{r}
+top_players <- DET2023 %>%
+  arrange(desc(OPS)) %>%
+  slice_head(n = 10)
+
+ggplot(top_players, aes(x = reorder(Name, OPS), y = OPS)) +
+  geom_bar(stat = "identity", fill = "skyblue") +
+  labs(title = "Top 10 Players by OPS in DET2023",
+       x = "Player",
+       y = "OPS") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+
+Heres a more precise look:
+```{r}
+combined_data <- bind_rows(
+  DET2021 %>% mutate(year = 2021),
+  DET2022 %>% mutate(year = 2022),
+  DET2023 %>% mutate(year = 2023)
+)
+
+combined_data$Name <- iconv(combined_data$Name, from = "UTF-8", to = "ASCII//TRANSLIT")
+
+top_players_table <- DET2023 %>%
+  arrange(desc(OPS)) %>%
+  slice_head(n = 10) %>%
+  select(Name, OPS)
+
+print(top_players_table)
+
+```
+Now let's look at 2022:
+```{r}
+top_players_table <- DET2022 %>%
+  arrange(desc(OPS)) %>%
+  slice_head(n = 10) %>%
+  select(Name, OPS)
+DET2022 <- DET2022 %>%
+  filter(Name != "Matthew Boyd")
+combined_data$Name <- iconv(combined_data$Name, from = "UTF-8", to = "ASCII//TRANSLIT")
+
+print(top_players_table)
+```
+And 2021:
+```{r}
+top_players_table <- DET2021 %>%
+  arrange(desc(OPS)) %>%
+  slice_head(n = 10) %>%
+  select(Name, OPS)
+DET2021 <- DET2021 %>%
+  filter(Name != "Matthew Boyd*")
+combined_data$Name <- iconv(combined_data$Name, from = "UTF-8", to = "ASCII//TRANSLIT")
+
+print(top_players_table)
+```
+A good candidate for endorsement will not only have a high OPS in 2023, but show a consistently high OPS across all three years. This is a good indicator that the player will continue to perform at a high level in the future. So, let's find player's average OPS from 2021, 2022, and 2023.
+```{r}
+
+combined_data <- bind_rows(
+  DET2021 %>% mutate(year = 2021),
+  DET2022 %>% mutate(year = 2022),
+  DET2023 %>% mutate(year = 2023)
+)
+DET2021 <- DET2021 %>%
+  filter(Name != "Matthew Boyd")
+DET2021 <- DET2021 %>%
+  filter(Name != "Matthew Boyd*")
+combined_data$Name <- iconv(combined_data$Name, from = "UTF-8", to = "ASCII//TRANSLIT")
+
+average_ops <- combined_data %>%
+  group_by(Name) %>%
+  summarise(average_OPS = mean(OPS, na.rm = TRUE)) %>%
+  arrange(desc(average_OPS))
+
+print(average_ops)
+
+```
+```{r}
+combined_data <- bind_rows(
+  DET2021 %>% mutate(Year = "2021"),
+  DET2022 %>% mutate(Year = "2022"),
+  DET2023 %>% mutate(Year = "2023")
+)
+
+average_ops <- combined_data %>%
+  group_by(Name) %>%
+  summarise(Avg_OPS = mean(OPS, na.rm = TRUE)) %>%
+  arrange(-Avg_OPS) %>%
+  slice_head(n = 2)
+
+filtered_data <- combined_data %>%
+  filter(Name %in% average_ops$Name)
+
+ggplot(filtered_data, aes(x = Name, y = OPS, fill = Year)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(
+    title = "Top 2 Players by Average OPS (2021-2023)",
+    x = "Player",
+    y = "OPS",
+    fill = "Year"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+Kerry Carpenter not only has the best current OPS, but the best average OPS. He would be the ideal candidate for endorsement. 
+
